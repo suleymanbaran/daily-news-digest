@@ -142,6 +142,30 @@ def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], m
         if passed:
             kept.append(item)
 
+    # Fallback: if all items were already seen (e.g. manual re-run on same day),
+    # process the latest items so user never receives an empty digest.
+    if not kept:
+        for item in items:
+            ts = item.get("timestamp")
+            if ts and (now - ts > age_limit_seconds):
+                continue
+            cat = item.get("category", "")
+            title = item.get("title", "")
+            snippet = item.get("snippet", "")
+            passed = False
+            if cat == "tech" and matches_keywords(title, snippet, TECH_KEYWORDS):
+                passed = True
+            elif cat == "europe" and (matches_keywords(title, snippet, EUROPE_KEYWORDS) or matches_keywords(title, snippet, TECH_KEYWORDS)):
+                passed = True
+            elif cat == "turkey" and matches_keywords(title, snippet, TURKEY_KEYWORDS):
+                passed = True
+            elif cat == "finance" and matches_keywords(title, snippet, FINANCE_KEYWORDS):
+                passed = True
+            elif cat == "world" and matches_keywords(title, snippet, TECH_KEYWORDS | FINANCE_KEYWORDS | {"war", "peace", "election", "president", "summit", "trade", "climate", "ai"}):
+                passed = True
+            if passed:
+                kept.append(item)
+
     return kept
 
 def cluster_items(items: List[Dict[str, Any]], threshold: float = 0.35) -> List[Dict[str, Any]]:

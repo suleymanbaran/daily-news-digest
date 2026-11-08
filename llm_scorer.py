@@ -46,7 +46,7 @@ def call_gemini(api_key: str, prompt: str, model: str = "gemini-3.8-flash") -> T
             "responseMimeType": "application/json"
         }
     }
-    resp = requests.post(url, json=payload, timeout=45)
+    resp = requests.post(url, json=payload, timeout=90)
     if resp.status_code != 200:
         raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text}")
     
@@ -276,7 +276,7 @@ def process_clusters(
 
     # Format clusters into prompt
     cluster_prompts = []
-    for c in clusters[:25]:  # limit to top 25 candidate clusters to conserve tokens
+    for c in clusters[:12]:  # limit to top 12 candidate clusters to conserve tokens and prevent API timeouts
         items_desc = []
         for it in c["items"]:
             items_desc.append({
