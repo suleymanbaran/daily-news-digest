@@ -1,0 +1,224 @@
+[
+  {
+    "name": "TLDR AI",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://tldr.tech/api/rss/ai"
+  },
+  {
+    "name": "The Batch (DeepLearning.AI)",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://www.deeplearning.ai/the-batch/feed/"
+  },
+  {
+    "name": "Latent Space",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://www.latent.space/feed"
+  },
+  {
+    "name": "Simon Willison's Blog",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://simonwillison.net/atom/everything/"
+  },
+  {
+    "name": "Hugging Face Blog",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://huggingface.co/blog/feed.xml"
+  },
+  {
+    "name": "OpenAI News",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://openai.com/news/rss.xml"
+  },
+  {
+    "name": "Google AI Blog",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://blog.google/technology/ai/rss/"
+  },
+  {
+    "name": "Anthropic News",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://www.anthropic.com/feed.xml"
+  },
+  {
+    "name": "Hacker News Front Page",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://hnrss.org/frontpage"
+  },
+  {
+    "name": "Meta Engineering",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://engineering.fb.com/feed/"
+  },
+  {
+    "name": "Netflix TechBlog",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://netflixtechblog.com/feed"
+  },
+  {
+    "name": "GitHub Engineering",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://github.blog/engineering/feed/"
+  },
+  {
+    "name": "BBC News World",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml"
+  },
+  {
+    "name": "Deutsche Welle (DW)",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://rss.dw.com/xml/rss-en-world"
+  },
+  {
+    "name": "France 24",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://www.france24.com/en/rss"
+  },
+  {
+    "name": "Euronews",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://www.euronews.com/rss"
+  },
+  {
+    "name": "The Guardian World",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://www.theguardian.com/world/rss"
+  },
+  {
+    "name": "bianet English",
+    "category": "turkey",
+    "source_type": "independent",
+    "feed_url": "https://bianet.org/english/rss"
+  },
+  {
+    "name": "Medyascope",
+    "category": "turkey",
+    "source_type": "independent",
+    "feed_url": "https://medyascope.tv/feed/"
+  },
+  {
+    "name": "T24",
+    "category": "turkey",
+    "source_type": "independent",
+    "feed_url": "https://t24.com.tr/rss"
+  },
+  {
+    "name": "Diken",
+    "category": "turkey",
+    "source_type": "independent",
+    "feed_url": "https://www.diken.com.tr/feed/"
+  },
+  {
+    "name": "BBC Türkçe",
+    "category": "turkey",
+    "source_type": "international",
+    "feed_url": "https://feeds.bbci.co.uk/turkce/rss.xml"
+  },
+  {
+    "name": "DW Türkçe",
+    "category": "turkey",
+    "source_type": "international",
+    "feed_url": "https://rss.dw.com/xml/rss-tur-all"
+  },
+  {
+    "name": "Anadolu Agency",
+    "category": "turkey",
+    "source_type": "official/government-aligned",
+    "feed_url": "https://www.aa.com.tr/tr/rss/default?cat=guncel"
+  },
+  {
+    "name": "The Local Italy",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://www.thelocal.it/feed/"
+  },
+  {
+    "name": "ANSA English",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://www.ansa.it/sito/ansait_rss.xml"
+  },
+  {
+    "name": "StartupItalia",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://startupitalia.eu/feed/"
+  },
+  {
+    "name": "Federal Reserve Press Releases",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://www.federalreserve.gov/feeds/press_all.xml"
+  },
+  {
+    "name": "ECB Press Releases",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://www.ecb.europa.eu/rss/press.html"
+  },
+  {
+    "name": "Central Bank of Turkey (TCMB)",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://www.tcmb.gov.tr/wps/wcm/connect/tcmb+en/tcmb+en/rss/press+releases"
+  },
+  {
+    "name": "TUIK (TurkStat)",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://data.tuik.gov.tr/rss"
+  },
+  {
+    "name": "Istat",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://www.istat.it/en/rss"
+  },
+  {
+    "name": "Eurostat Press Releases",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://ec.europa.eu/eurostat/en/search?p_p_id=estatsearchportlet_WAR_estatsearchportlet&p_p_lifecycle=2&p_p_state=maximized&p_p_mode=view&p_p_resource_id=atom&_estatsearchportlet_WAR_estatsearchportlet_collection=CAT_PREREL"
+  },
+  {
+    "name": "Yahoo Finance",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://finance.yahoo.com/news/rssindex"
+  },
+  {
+    "name": "CNBC Finance",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664"
+  },
+  {
+    "name": "MarketWatch Top Stories",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+  },
+  {
+    "name": "Investing.com",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://www.investing.com/rss/news_25.rss"
+  }
+]

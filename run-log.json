@@ -1,0 +1,36 @@
+[
+  {
+    "timestamp": "2026-11-08T14:27:32.750764",
+    "date": "2026-11-08",
+    "dry_run": true,
+    "sources_configured": 37,
+    "items_fetched": 2970,
+    "items_kept_after_prefilter": 128,
+    "clusters_formed": 119,
+    "items_in_digest": 12,
+    "feed_problems_count": 6,
+    "model_used": "dry-run (heuristic)",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 24.91,
+    "output_file": "./digest-2026-11-08.md"
+  },
+  {
+    "timestamp": "2026-11-08T14:39:22.201258",
+    "date": "2026-11-08",
+    "dry_run": true,
+    "sources_configured": 37,
+    "items_fetched": 0,
+    "items_kept_after_prefilter": 0,
+    "clusters_formed": 0,
+    "items_in_digest": 0,
+    "feed_problems_count": 37,
+    "model_used": "dry-run (heuristic)",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 0.02,
+    "output_file": "./digest-2026-11-08.md"
+  }
+]
