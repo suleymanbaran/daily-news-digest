@@ -49,5 +49,22 @@
     "estimated_cost_usd": 0.0,
     "duration_seconds": 25.15,
     "output_file": "./digest-2026-11-08.md"
+  },
+  {
+    "timestamp": "2026-11-08T14:03:34.014481",
+    "date": "2026-11-08",
+    "dry_run": false,
+    "sources_configured": 37,
+    "items_fetched": 2871,
+    "items_kept_after_prefilter": 2,
+    "clusters_formed": 2,
+    "items_in_digest": 2,
+    "feed_problems_count": 7,
+    "model_used": "fallback heuristic (error: Gemini API error 404: {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://aistudio.google.com/docs/get-started).\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n)",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 23.15,
+    "output_file": "./digest-2026-11-08.md"
   }
 ]
