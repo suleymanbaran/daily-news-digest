@@ -35,31 +35,42 @@ def extract_json(text: str) -> Dict[str, Any]:
         text = match.group(1).strip()
     return json.loads(text)
 
-def call_gemini(api_key: str, prompt: str, model: str = "gemini-3.8-flash") -> Tuple[str, int, int]:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-    payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": prompt}]}
-        ],
-        "generationConfig": {
-            "temperature": 0.2,
-            "responseMimeType": "application/json"
+def call_gemini(api_key: str, prompt: str, model: str = None) -> Tuple[str, int, int, str]:
+    """
+    Call Gemini API with automatic model rollover if a model experiences 503 high demand spikes.
+    """
+    models_to_try = [model] if model else ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-3.8-flash"]
+    last_err = None
+
+    for m in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {"role": "user", "parts": [{"text": prompt}]}
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "responseMimeType": "application/json"
+            }
         }
-    }
-    resp = requests.post(url, json=payload, timeout=90)
-    if resp.status_code != 200:
-        raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text}")
-    
-    data = resp.json()
-    candidates = data.get("candidates", [])
-    if not candidates:
-        raise RuntimeError("No candidate returned by Gemini API")
-    
-    text = candidates[0]["content"]["parts"][0]["text"]
-    usage = data.get("usageMetadata", {})
-    prompt_tokens = usage.get("promptTokenCount", len(prompt) // 4)
-    completion_tokens = usage.get("candidatesTokenCount", len(text) // 4)
-    return text, prompt_tokens, completion_tokens
+        try:
+            resp = requests.post(url, json=payload, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    text = candidates[0]["content"]["parts"][0]["text"]
+                    usage = data.get("usageMetadata", {})
+                    prompt_tokens = usage.get("promptTokenCount", len(prompt) // 4)
+                    completion_tokens = usage.get("candidatesTokenCount", len(text) // 4)
+                    return text, prompt_tokens, completion_tokens, m
+            print(f"[WARN] Gemini model '{m}' returned HTTP {resp.status_code}. Retrying with next model...")
+            last_err = f"HTTP {resp.status_code}: {resp.text[:120]}"
+        except Exception as e:
+            print(f"[WARN] Request to Gemini model '{m}' failed: {e}. Retrying with next model...")
+            last_err = str(e)
+
+    raise RuntimeError(f"All Gemini models failed. Last error: {last_err}")
 
 def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[str, int, int]:
     url = "https://api.openai.com/v1/chat/completions"
@@ -347,9 +358,8 @@ Provide your JSON response matching this schema:
 
     try:
         if gemini_key:
-            model_name = "gemini-3.8-flash"
-            raw_response, prompt_tokens, completion_tokens = call_gemini(gemini_key, prompt_content, model=model_name)
-            # Gemini 3.8 Flash pricing: $0.10/1M input, $0.40/1M output
+            raw_response, prompt_tokens, completion_tokens, model_name = call_gemini(gemini_key, prompt_content)
+            # Gemini Flash pricing: $0.10/1M input, $0.40/1M output
             cost = (prompt_tokens * 0.00000010) + (completion_tokens * 0.00000040)
         else:
             model_name = "gpt-4o-mini"

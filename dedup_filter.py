@@ -142,10 +142,14 @@ def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], m
         if passed:
             kept.append(item)
 
-    # Fallback: if all items were already seen (e.g. manual re-run on same day),
-    # process the latest items so user never receives an empty digest.
-    if not kept:
+    # Fallback/supplement: if kept has fewer than 8 items (e.g. manual re-runs on same day),
+    # backfill with recent items so the digest is always balanced across Tech, Europe, Turkey, Finance.
+    if len(kept) < 8:
+        already_kept_urls = {it.get("link") or it.get("id") for it in kept}
         for item in items:
+            url = item.get("link") or item.get("id")
+            if url in already_kept_urls:
+                continue
             ts = item.get("timestamp")
             if ts and (now - ts > age_limit_seconds):
                 continue
@@ -165,6 +169,7 @@ def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], m
                 passed = True
             if passed:
                 kept.append(item)
+                already_kept_urls.add(url)
 
     return kept
 
