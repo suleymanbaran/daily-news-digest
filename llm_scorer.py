@@ -72,8 +72,7 @@ def call_gemini(api_key: str, prompt: str, model: str = None) -> Tuple[str, int,
 
     raise RuntimeError(f"All Gemini models failed. Last error: {last_err}")
 
-def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[str, int, int]:
-    url = "https://api.openai.com/v1/chat/completions"
+def call_openai_compatible(api_key: str, prompt: str, base_url: str, model: str) -> Tuple[str, int, int]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -87,9 +86,9 @@ def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[
         "temperature": 0.2,
         "response_format": {"type": "json_object"}
     }
-    resp = requests.post(url, headers=headers, json=payload, timeout=45)
+    resp = requests.post(base_url, headers=headers, json=payload, timeout=60)
     if resp.status_code != 200:
-        raise RuntimeError(f"OpenAI API error {resp.status_code}: {resp.text}")
+        raise RuntimeError(f"API error ({model}) {resp.status_code}: {resp.text}")
     
     data = resp.json()
     text = data["choices"][0]["message"]["content"]
@@ -97,6 +96,12 @@ def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[
     prompt_tokens = usage.get("prompt_tokens", len(prompt) // 4)
     completion_tokens = usage.get("completion_tokens", len(text) // 4)
     return text, prompt_tokens, completion_tokens
+
+def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[str, int, int]:
+    return call_openai_compatible(api_key, prompt, "https://api.openai.com/v1/chat/completions", model)
+
+def call_groq(api_key: str, prompt: str, model: str = "llama-3.3-70b-versatile") -> Tuple[str, int, int]:
+    return call_openai_compatible(api_key, prompt, "https://api.groq.com/openai/v1/chat/completions", model)
 
 def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
@@ -279,10 +284,11 @@ def process_clusters(
     Score clusters, summarize top ones, and extract vocabulary.
     Returns processed digest payload + token/cost metrics.
     """
-    gemini_key = os.environ.get("GEMINI_API_KEY")
     openai_key = os.environ.get("OPENAI_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
 
-    if dry_run or (not gemini_key and not openai_key):
+    if dry_run or (not openai_key and not groq_key and not gemini_key):
         return heuristic_dry_run_process(clusters)
 
     # Format clusters into prompt
@@ -357,15 +363,20 @@ Provide your JSON response matching this schema:
     raw_response = ""
 
     try:
-        if gemini_key:
-            raw_response, prompt_tokens, completion_tokens, model_name = call_gemini(gemini_key, prompt_content)
-            # Gemini Flash pricing: $0.10/1M input, $0.40/1M output
-            cost = (prompt_tokens * 0.00000010) + (completion_tokens * 0.00000040)
-        else:
+        if openai_key:
             model_name = "gpt-4o-mini"
             raw_response, prompt_tokens, completion_tokens = call_openai(openai_key, prompt_content, model=model_name)
             # GPT-4o-mini pricing: $0.15/1M input, $0.60/1M output
             cost = (prompt_tokens * 0.00000015) + (completion_tokens * 0.00000060)
+        elif groq_key:
+            model_name = "llama-3.3-70b-versatile"
+            raw_response, prompt_tokens, completion_tokens = call_groq(groq_key, prompt_content, model=model_name)
+            # Groq free tier
+            cost = 0.0
+        elif gemini_key:
+            raw_response, prompt_tokens, completion_tokens, model_name = call_gemini(gemini_key, prompt_content)
+            # Gemini Flash pricing: $0.10/1M input, $0.40/1M output
+            cost = (prompt_tokens * 0.00000010) + (completion_tokens * 0.00000040)
 
         parsed = extract_json(raw_response)
         parsed["tokens_prompt"] = prompt_tokens
