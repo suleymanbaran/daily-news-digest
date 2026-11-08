@@ -43,9 +43,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add state.json run-log.json digest-*.md
-          if ! git diff --staged --quiet; then
+          if ! git diff --cached --quiet; then
             git commit -m "chore: automated daily news digest [skip ci]"
-            git push origin HEAD:main
+            git pull --rebase origin main || true
+            git push origin HEAD:main || echo "[WARN] Git push could not be completed; will sync on next run."
           else
             echo "No changes to commit."
           fi
