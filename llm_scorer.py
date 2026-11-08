@@ -35,7 +35,7 @@ def extract_json(text: str) -> Dict[str, Any]:
         text = match.group(1).strip()
     return json.loads(text)
 
-def call_gemini(api_key: str, prompt: str, model: str = "gemini-2.5-flash") -> Tuple[str, int, int]:
+def call_gemini(api_key: str, prompt: str, model: str = "gemini-3.8-flash") -> Tuple[str, int, int]:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = {
         "contents": [
@@ -347,9 +347,9 @@ Provide your JSON response matching this schema:
 
     try:
         if gemini_key:
-            model_name = "gemini-2.5-flash"
+            model_name = "gemini-3.8-flash"
             raw_response, prompt_tokens, completion_tokens = call_gemini(gemini_key, prompt_content, model=model_name)
-            # Gemini 2.5 Flash pricing: $0.10/1M input, $0.40/1M output
+            # Gemini 3.8 Flash pricing: $0.10/1M input, $0.40/1M output
             cost = (prompt_tokens * 0.00000010) + (completion_tokens * 0.00000040)
         else:
             model_name = "gpt-4o-mini"

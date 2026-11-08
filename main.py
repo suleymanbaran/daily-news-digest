@@ -77,15 +77,18 @@ def main():
     telegram_delivered = False
     if not args.dry_run:
         from delivery import send_telegram_digest
-        if os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID"):
+        bot_token_present = bool(os.environ.get("TELEGRAM_BOT_TOKEN"))
+        chat_id_present = bool(os.environ.get("TELEGRAM_CHAT_ID"))
+        print(f"[INFO] Telegram configuration: TELEGRAM_BOT_TOKEN set={bot_token_present}, TELEGRAM_CHAT_ID set={chat_id_present}")
+        if bot_token_present and chat_id_present:
             print("Sending digest to Telegram...")
             telegram_delivered = send_telegram_digest(digest_md)
             if telegram_delivered:
                 print("Successfully delivered digest to Telegram.")
             else:
-                print("[WARN] Telegram delivery failed.")
+                print("[WARN] Telegram delivery failed. Check output above.")
         else:
-            print("[INFO] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set. Skipping Telegram dispatch.")
+            print("[WARN] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not provided in environment secrets.")
 
     # 8. Update State (mark items as seen only if not in dry-run mode, or record if desired)
     for it in filtered_items:
