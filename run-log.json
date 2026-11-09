@@ -100,5 +100,22 @@
     "estimated_cost_usd": 0.0,
     "duration_seconds": 68.88,
     "output_file": "./digest-2026-11-08.md"
+  },
+  {
+    "timestamp": "2026-11-09T17:06:16.129915",
+    "date": "2026-11-09",
+    "dry_run": false,
+    "sources_configured": 37,
+    "items_fetched": 2880,
+    "items_kept_after_prefilter": 117,
+    "clusters_formed": 113,
+    "items_in_digest": 12,
+    "feed_problems_count": 7,
+    "model_used": "fallback heuristic (error: All Gemini models failed. Last error: HTTPSConnectionPool(host='generativelanguage.googleapis.com', port=443): Read timed out. (read timeout=60))",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 94.72,
+    "output_file": "./digest-2026-11-09.md"
   }
 ]
