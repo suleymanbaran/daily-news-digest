@@ -117,5 +117,22 @@
     "estimated_cost_usd": 0.0,
     "duration_seconds": 94.72,
     "output_file": "./digest-2026-11-09.md"
+  },
+  {
+    "timestamp": "2026-11-10T15:23:31.280309",
+    "date": "2026-11-10",
+    "dry_run": false,
+    "sources_configured": 37,
+    "items_fetched": 2882,
+    "items_kept_after_prefilter": 133,
+    "clusters_formed": 123,
+    "items_in_digest": 12,
+    "feed_problems_count": 7,
+    "model_used": "fallback heuristic (error: All Gemini models failed. Last error: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are u)",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 49.15,
+    "output_file": "./digest-2026-11-10.md"
   }
 ]
