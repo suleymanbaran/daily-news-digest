@@ -116,11 +116,47 @@ def call_openai_compatible(api_key: str, prompt: str, base_url: str, model: str)
             time.sleep(3 * (attempt + 1))
     raise RuntimeError(last_err)
 
-def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[str, int, int]:
-    return call_openai_compatible(api_key, prompt, "https://api.openai.com/v1/chat/completions", model)
+def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[str, int, int, str]:
+    text, pt, ct = call_openai_compatible(api_key, prompt, "https://api.openai.com/v1/chat/completions", model)
+    return text, pt, ct, model
 
-def call_groq(api_key: str, prompt: str, model: str = "llama-3.3-70b-versatile") -> Tuple[str, int, int]:
-    return call_openai_compatible(api_key, prompt, "https://api.groq.com/openai/v1/chat/completions", model)
+GROQ_MODEL_PREFERENCE = [
+    "llama-3.3-70b-versatile",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "qwen/qwen3-32b",
+    "moonshotai/kimi-k2-instruct",
+    "gemma2-9b-it",
+    "llama-3.1-8b-instant",
+]
+
+def pick_groq_model(api_key: str) -> str:
+    """Ask Groq which models this account can actually use, and pick the best one.
+    Avoids hardcoding model names that get deprecated over time."""
+    resp = requests.get(
+        "https://api.groq.com/openai/v1/models",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"Groq /models returned {resp.status_code}: {resp.text[:200]}")
+    ids = [m.get("id") for m in resp.json().get("data", []) if m.get("id")]
+    if not ids:
+        raise RuntimeError(
+            "Groq account reports no available models. Verify the account has "
+            "production access (console.groq.com may require account/phone verification)."
+        )
+    for pref in GROQ_MODEL_PREFERENCE:
+        if pref in ids:
+            return pref
+    print(f"[INFO] No preferred Groq model found; available: {ids}. Using '{ids[0]}'.")
+    return ids[0]
+
+def call_groq(api_key: str, prompt: str, model: str = None) -> Tuple[str, int, int, str]:
+    if not model:
+        model = pick_groq_model(api_key)
+    text, pt, ct = call_openai_compatible(api_key, prompt, "https://api.groq.com/openai/v1/chat/completions", model)
+    return text, pt, ct, model
 
 def select_balanced_clusters(clusters: List[Dict[str, Any]], total: int = 15) -> List[Dict[str, Any]]:
     """Round-robin across categories so the LLM sees every category, not just the first N clusters."""
@@ -398,30 +434,30 @@ def process_clusters(
 
     prompt_content = build_prompt(clusters)
 
-    providers: List[Tuple[str, str, Callable[[], Tuple[str, int, int]]]] = []
+    providers: List[Tuple[str, str, Callable[[], Tuple[str, int, int, str]]]] = []
     if openai_key:
         providers.append((
-            "gpt-4o-mini",
             "openai",
+            "gpt-4o-mini",
             lambda: call_openai(openai_key, prompt_content),
         ))
     if groq_key:
         providers.append((
-            "llama-3.3-70b-versatile",
             "groq",
+            "auto-selected",
             lambda: call_groq(groq_key, prompt_content),
         ))
     if gemini_key:
         providers.append((
-            GEMINI_MODELS[0],
             "gemini",
-            lambda: call_gemini(gemini_key, prompt_content)[:3],
+            GEMINI_MODELS[0],
+            lambda: call_gemini(gemini_key, prompt_content),
         ))
 
     errors = []
-    for model_name, provider, call in providers:
+    for provider, model_label, call in providers:
         try:
-            raw_response, prompt_tokens, completion_tokens = call()
+            raw_response, prompt_tokens, completion_tokens, model_used = call()
             parsed = extract_json(raw_response)
             if provider == "openai":
                 cost = (prompt_tokens * 0.00000015) + (completion_tokens * 0.00000060)
@@ -432,10 +468,10 @@ def process_clusters(
             parsed["tokens_prompt"] = prompt_tokens
             parsed["tokens_completion"] = completion_tokens
             parsed["estimated_cost_usd"] = round(cost, 6)
-            parsed["model_used"] = model_name
+            parsed["model_used"] = f"{provider}/{model_used}"
             return parsed
         except Exception as e:
-            print(f"[WARN] Provider '{provider}' ({model_name}) failed: {e}")
+            print(f"[WARN] Provider '{provider}' ({model_label}) failed: {e}")
             errors.append(f"{provider}: {str(e)[:160]}")
             continue
 
