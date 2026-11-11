@@ -314,5 +314,25 @@
     "estimated_cost_usd": 0.0,
     "duration_seconds": 46.88,
     "output_file": "./digest-2026-11-11.md"
+  },
+  {
+    "timestamp": "2026-11-11T14:04:45.203641",
+    "date": "2026-11-11",
+    "dry_run": false,
+    "success": true,
+    "sources_configured": 53,
+    "items_fetched": 3895,
+    "items_kept_after_prefilter": 7,
+    "clusters_formed": 7,
+    "items_in_digest": 7,
+    "feed_problems_count": 0,
+    "telegram_configured": true,
+    "telegram_delivered": true,
+    "model_used": "groq/openai/gpt-oss-120b",
+    "tokens_prompt": 2354,
+    "tokens_completion": 3717,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 34.52,
+    "output_file": "./digest-2026-11-11.md"
   }
 ]
