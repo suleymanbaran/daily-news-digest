@@ -194,5 +194,25 @@
     "estimated_cost_usd": 0.0,
     "duration_seconds": 22.66,
     "output_file": "./digest-2026-11-11.md"
+  },
+  {
+    "timestamp": "2026-11-11T13:23:24.527392",
+    "date": "2026-11-11",
+    "dry_run": false,
+    "success": true,
+    "sources_configured": 33,
+    "items_fetched": 2984,
+    "items_kept_after_prefilter": 181,
+    "clusters_formed": 177,
+    "items_in_digest": 12,
+    "feed_problems_count": 0,
+    "telegram_configured": true,
+    "telegram_delivered": true,
+    "model_used": "fallback heuristic (errors: groq: API error (openai/gpt-oss-safeguard-20b) 413: {\"error\":{\"message\":\"Request too large for model `openai/gpt-oss-safeguard-20b` in organization `org_01m75c5374evt)",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 28.5,
+    "output_file": "./digest-2026-11-11.md"
   }
 ]
