@@ -10,11 +10,12 @@ SYSTEM_INSTRUCTION = """You are "Personal Journalist", a friendly daily news-dig
 - Career goals: AI engineer, forward deployed AI engineer, or SDE (preparing for tech interviews).
 - Interested in: building AI products and agents, tech/startup jobs in Italy & Europe.
 - Follows: Turkey's news & economy (TRY, EUR, USD matter).
+- Sports fan: Formula 1 and European football, especially the Turkish Süper Lig.
 - Improving English and learning Italian.
 
 Your task:
 1. Score each story cluster 1-5 for relevance to this user (5 = highly relevant, 1 = low relevance).
-2. For the top stories (score 4-5, up to 12 items total, balanced across categories tech / europe / turkey / finance / world), produce:
+2. For the top stories (score 4-5, up to 12 items total, balanced across categories tech / europe / turkey / finance / world / sport — include the best 2-3 sport stories when available), produce:
    - "tldr": ONE punchy sentence (max ~20 words) capturing the core of the story, in simple everyday English.
    - "summary": a DETAILED but easy-to-understand summary of 3-4 sentences. Explain the story like you are talking to a smart friend: what happened, the key numbers or facts, who is involved, and what happens next. Use ONLY facts explicitly present in the provided titles/snippets. NEVER hallucinate or invent outside facts. If a snippet is thin, summarize what is there in 2 sentences rather than inventing detail.
    - "why_it_matters": exactly ONE short, personal sentence tailored to the user's profile (career, exams/interviews, AI engineering, Italy/Europe job market, Turkish economy). Vary the wording between items; never repeat the same sentence.
@@ -141,9 +142,12 @@ def pick_groq_model(api_key: str) -> str:
     if resp.status_code != 200:
         raise RuntimeError(f"Groq /models returned {resp.status_code}: {resp.text[:200]}")
     ids = [m.get("id") for m in resp.json().get("data", []) if m.get("id")]
+    # Only general-purpose chat models: skip moderation, audio and embedding models
+    skip = ("safeguard", "guard", "whisper", "embed", "distil", "tts", "playai")
+    ids = [i for i in ids if not any(s in i.lower() for s in skip)]
     if not ids:
         raise RuntimeError(
-            "Groq account reports no available models. Verify the account has "
+            "Groq account reports no available chat models. Verify the account has "
             "production access (console.groq.com may require account/phone verification)."
         )
     for pref in GROQ_MODEL_PREFERENCE:
@@ -209,6 +213,11 @@ def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
                 score = 4
         elif cat == "world":
             score = 3
+        elif cat == "sport":
+            if any(k in combined for k in ["süper lig", "super lig", "galatasaray", "fenerbahce", "fenerbahçe", "besiktas", "beşiktaş", "trabzonspor", "formula 1", "f1", "galibiyet"]):
+                score = 5
+            else:
+                score = 4
 
         sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", snippet) if s.strip()]
         if sentences:
@@ -225,6 +234,8 @@ def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
             why = "Impacts the Turkish economic outlook and currency exchange dynamics you monitor."
         elif cat == "finance":
             why = "Key macroeconomic indicator influencing global monetary policy, interest rates, and foreign exchange (USD/EUR/TRY)."
+        elif cat == "sport":
+            why = "Keeps you up to date on your F1 and football teams, including the Süper Lig race."
         else:
             why = "Provides broader global context affecting markets and technology policy."
 
@@ -343,26 +354,26 @@ def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
         "model_used": "dry-run (heuristic)"
     }
 
-def build_prompt(clusters: List[Dict[str, Any]]) -> str:
+def build_prompt(clusters: List[Dict[str, Any]], total_clusters: int = 12, max_items: int = 3, snippet_chars: int = 350) -> str:
     cluster_prompts = []
-    for c in select_balanced_clusters(clusters, total=15):
+    for c in select_balanced_clusters(clusters, total=total_clusters):
         # Cap items per cluster, keeping distinct source_types first (needed for Turkey comparisons)
         items_sorted = sorted(c["items"], key=lambda it: it.get("source_type") or "")
         items_desc = []
         seen_types = set()
         for it in items_sorted:
             stype = it.get("source_type")
-            if len(items_desc) >= 4 and stype in seen_types:
+            if len(items_desc) >= max_items and stype in seen_types:
                 continue
             seen_types.add(stype)
             items_desc.append({
                 "source_name": it["source_name"],
                 "source_type": stype,
                 "title": it["title"],
-                "snippet": it["snippet"][:500],
+                "snippet": it["snippet"][:snippet_chars],
                 "link": it["link"]
             })
-            if len(items_desc) >= 5:
+            if len(items_desc) >= max_items + 2:
                 break
         cluster_prompts.append({
             "cluster_id": c["cluster_id"],
@@ -433,31 +444,52 @@ def process_clusters(
         return heuristic_dry_run_process(clusters)
 
     prompt_content = build_prompt(clusters)
+    print(f"[INFO] LLM prompt built: {len(prompt_content)} chars.")
 
-    providers: List[Tuple[str, str, Callable[[], Tuple[str, int, int, str]]]] = []
+    providers: List[Tuple[str, str, Callable[[str], Tuple[str, int, int, str]]]] = []
     if openai_key:
         providers.append((
             "openai",
             "gpt-4o-mini",
-            lambda: call_openai(openai_key, prompt_content),
+            lambda p: call_openai(openai_key, p),
         ))
     if groq_key:
         providers.append((
             "groq",
             "auto-selected",
-            lambda: call_groq(groq_key, prompt_content),
+            lambda p: call_groq(groq_key, p),
         ))
     if gemini_key:
         providers.append((
             "gemini",
             GEMINI_MODELS[0],
-            lambda: call_gemini(gemini_key, prompt_content),
+            lambda p: call_gemini(gemini_key, p),
         ))
 
     errors = []
     for provider, model_label, call in providers:
+        result = None
+        last_error = ""
+        for variant, p in (("full", prompt_content), ("compact", None)):
+            if p is None:
+                # Only worth retrying smaller if the failure was a size/TPM limit
+                if not any(x in last_error.lower() for x in ("413", "too large", "tpm", "context")):
+                    break
+                p = build_prompt(clusters, total_clusters=5, max_items=2, snippet_chars=200)
+                print(f"[INFO] Retrying {provider} with a compact prompt ({len(p)} chars).")
+            try:
+                result = call(p)
+                break
+            except Exception as e:
+                last_error = str(e)
+                print(f"[WARN] Provider '{provider}' ({model_label}, {variant} prompt) failed: {e}")
+
+        if result is None:
+            errors.append(f"{provider}: {last_error[:160]}")
+            continue
+
         try:
-            raw_response, prompt_tokens, completion_tokens, model_used = call()
+            raw_response, prompt_tokens, completion_tokens, model_used = result
             parsed = extract_json(raw_response)
             if provider == "openai":
                 cost = (prompt_tokens * 0.00000015) + (completion_tokens * 0.00000060)
@@ -471,8 +503,8 @@ def process_clusters(
             parsed["model_used"] = f"{provider}/{model_used}"
             return parsed
         except Exception as e:
-            print(f"[WARN] Provider '{provider}' ({model_label}) failed: {e}")
-            errors.append(f"{provider}: {str(e)[:160]}")
+            print(f"[WARN] Could not parse '{provider}' response: {e}")
+            errors.append(f"{provider}: unparseable response ({str(e)[:80]})")
             continue
 
     print("[WARN] All LLM providers failed; falling back to heuristic scoring.")

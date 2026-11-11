@@ -137,6 +137,9 @@ def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], m
             # For world news, keep items that intersect with geopolitics, tech, or macro economy
             if matches_keywords(title, snippet, TECH_KEYWORDS | FINANCE_KEYWORDS | {"war", "peace", "election", "president", "summit", "trade", "climate", "ai"}):
                 passed = True
+        elif cat == "sport":
+            # Hand-picked sport feeds (F1, football, Süper Lig) are always relevant
+            passed = True
 
         # If it passed or has strong title content, keep
         if passed:
@@ -166,6 +169,8 @@ def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], m
             elif cat == "finance" and matches_keywords(title, snippet, FINANCE_KEYWORDS):
                 passed = True
             elif cat == "world" and matches_keywords(title, snippet, TECH_KEYWORDS | FINANCE_KEYWORDS | {"war", "peace", "election", "president", "summit", "trade", "climate", "ai"}):
+                passed = True
+            elif cat == "sport":
                 passed = True
             if passed:
                 kept.append(item)

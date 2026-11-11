@@ -6,7 +6,8 @@ CATEGORY_TITLES = {
     "europe": "🇪🇺 Italy & Europe — Jobs & Startups",
     "turkey": "🇹🇷 Türkiye — News & Economy",
     "finance": "💰 Finance & Economy",
-    "world": "🌍 World News",
+    "world": "🌍 World & Global Policy",
+    "sport": "⚽ Football & 🏎️ F1",
 }
 
 def _format_item(it: Dict[str, Any]) -> List[str]:

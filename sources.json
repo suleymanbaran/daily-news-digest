@@ -102,12 +102,6 @@
     "feed_url": "https://medyascope.tv/feed/"
   },
   {
-    "name": "Diken",
-    "category": "turkey",
-    "source_type": "independent",
-    "feed_url": "https://www.diken.com.tr/feed/"
-  },
-  {
     "name": "BBC Türkçe",
     "category": "turkey",
     "source_type": "international",
@@ -196,5 +190,107 @@
     "category": "turkey",
     "source_type": "independent",
     "feed_url": "https://www.bloomberght.com/rss"
+  },
+  {
+    "name": "TRT World",
+    "category": "turkey",
+    "source_type": "official/government-aligned",
+    "feed_url": "https://news.google.com/rss/search?q=site:trtworld.com&hl=en-US&gl=US&ceid=US:en"
+  },
+  {
+    "name": "Hürriyet Daily News",
+    "category": "turkey",
+    "source_type": "independent",
+    "feed_url": "https://news.google.com/rss/search?q=site:hurriyetdailynews.com&hl=en-US&gl=US&ceid=US:en"
+  },
+  {
+    "name": "Anadolu Agency (English)",
+    "category": "turkey",
+    "source_type": "official/government-aligned",
+    "feed_url": "https://www.aa.com.tr/en/rss/default?cat=world"
+  },
+  {
+    "name": "La Stampa",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://www.lastampa.it/rss"
+  },
+  {
+    "name": "Corriere della Sera",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://xml2.corriereobjects.it/rss/homepage.xml"
+  },
+  {
+    "name": "La Repubblica",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://www.repubblica.it/rss/homepage/rss2.0.xml"
+  },
+  {
+    "name": "The Verge",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://www.theverge.com/rss/index.xml"
+  },
+  {
+    "name": "Ars Technica",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://feeds.arstechnica.com/arstechnica/index"
+  },
+  {
+    "name": "CNBC Top News",
+    "category": "finance",
+    "source_type": null,
+    "feed_url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"
+  },
+  {
+    "name": "Foreign Policy",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://foreignpolicy.com/feed/"
+  },
+  {
+    "name": "POLITICO Europe",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://www.politico.eu/feed/"
+  },
+  {
+    "name": "Al Jazeera",
+    "category": "world",
+    "source_type": null,
+    "feed_url": "https://www.aljazeera.com/xml/rss/all.xml"
+  },
+  {
+    "name": "Formula 1 Official",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.formula1.com/content/fom-website/en/latest/all.xml"
+  },
+  {
+    "name": "Autosport F1",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.autosport.com/rss/f1/news/"
+  },
+  {
+    "name": "BBC Football",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://feeds.bbci.co.uk/sport/football/rss.xml"
+  },
+  {
+    "name": "Guardian Football",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.theguardian.com/football/rss"
+  },
+  {
+    "name": "Süper Lig News (Google News EN)",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://news.google.com/rss/search?q=s%C3%BCper%20lig&hl=en-US&gl=US&ceid=US:en"
   }
 ]
