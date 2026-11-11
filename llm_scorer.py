@@ -15,7 +15,12 @@ SYSTEM_INSTRUCTION = """You are "Personal Journalist", a friendly daily news-dig
 
 Your task:
 1. Score each story cluster 1-5 for relevance to this user (5 = highly relevant, 1 = low relevance).
-2. Select the top stories (score 4-5) and produce details for 8-12 of them, balanced across categories tech / europe / turkey / finance / world / sport. HARD LIMITS: at most 2 sport items; at least 6 of the items must come from tech / europe / turkey / finance / world combined when enough fresh candidates exist. If few fresh non-sport candidates exist, return FEWER total items instead of filling the digest with sport:
+2. Select the top stories (score 4-5) and produce details for 12-16 of them, balanced across categories tech / europe / turkey / finance / world / sport. MANDATORY MINIMUMS (whenever such candidates exist in the input):
+   - at least 5 "tech" items (AI/engineering prioritized)
+   - at least 2 "turkey" items (prioritize Turkish politics and economy)
+   - at least 2 "world" items (prioritize global politics/geopolitics)
+   - sport: at least 2 Formula 1 stories, at least 1 Turkish Süper Lig story, at least 1 Fenerbahçe story, at least 1 European football story (Champions League / Premier League / La Liga / Serie A / Bundesliga); at most 6 sport items total.
+   If few fresh candidates exist for a category, include what exists — never pad the digest with duplicates or low-relevance sport items:
    - "tldr": ONE punchy sentence (max ~20 words) capturing the core of the story, in simple everyday English.
    - "summary": a DETAILED but easy-to-understand summary of 3-4 sentences. Explain the story like you are talking to a smart friend: what happened, the key numbers or facts, who is involved, and what happens next. Use ONLY facts explicitly present in the provided titles/snippets. NEVER hallucinate or invent outside facts. If a snippet is thin, summarize what is there in 2 sentences rather than inventing detail.
    - "why_it_matters": exactly ONE short, personal sentence tailored to the user's profile (career, exams/interviews, AI engineering, Italy/Europe job market, Turkish economy). Vary the wording between items; never repeat the same sentence.
@@ -193,8 +198,42 @@ def select_balanced_clusters(clusters: List[Dict[str, Any]], total: int = 15) ->
 
 # Per-category caps for the final digest so a content-rich feed (e.g. 6 sport
 # sources) can never crowd out tech/finance/politics.
-CATEGORY_CAPS = {"sport": 2}
+CATEGORY_CAPS = {"sport": 6, "tech": 7}
 DEFAULT_CATEGORY_CAP = 4
+
+# Mandatory minimums: user always wants Turkish politics/economy, global
+# politics, and a strong tech/AI section, even on days the LLM scores other
+# stories higher.
+MINIMUM_CATEGORY_ITEMS = {"tech": 5, "turkey": 2, "world": 2}
+
+# Mandatory sport topics (user is a Fenerbahçe and F1 follower): at least the
+# given count of items matching each topic whenever today's feeds contain them.
+SPORT_TOPIC_MINIMUMS = {"formula1": 2, "fenerbahce": 1, "superlig": 1, "euro_football": 1}
+
+SPORT_TOPIC_KEYWORDS = {
+    "formula1": [
+        "formula 1", "formula one", "f1", "grand prix", "verstappen", "norris",
+        "piastri", "hamilton", "leclerc", "russell", "alonso", "mclaren", "ferrari",
+        "mercedes amg", "red bull racing", "williams racing", "haas", "alpine f1", "aston martin",
+    ],
+    "fenerbahce": ["fenerbahçe", "fenerbahce", "fener"],
+    "superlig": [
+        "süper lig", "super lig", "superlig", "galatasaray", "beşiktaş", "besiktas",
+        "trabzonspor", "başakşehir", "basaksehir", "samsunspor", "göztepe", "goztepe",
+        "kocaelispor", "kasımpaşa", "kasimpasa", "antalyaspor", "alanyaspor", "rizespor",
+    ],
+    "euro_football": [
+        "premier league", "la liga", "serie a", "bundesliga", "ligue 1",
+        "champions league", "europa league", "conference league",
+        "arsenal", "liverpool", "manchester city", "manchester united", "chelsea",
+        "tottenham", "newcastle", "real madrid", "barcelona", "atletico", "atlético",
+        "bayern", "dortmund", "juventus", "inter milan", "ac milan", "napoli",
+        "psg", "paris saint-germain", "benfica", "porto", "ajax",
+    ],
+}
+
+def _item_text(it: Dict[str, Any]) -> str:
+    return " ".join(str(it.get(k) or "") for k in ("title", "tldr", "summary")).lower()
 
 def enforce_category_caps(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     counts: Dict[str, int] = {}
@@ -208,7 +247,76 @@ def enforce_category_caps(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         capped.append(it)
     return capped
 
-def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _full_heuristic_pool(clusters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """All heuristic-scored clusters (uncapped, score-descending) for backfilling."""
+    return heuristic_dry_run_process(clusters, top_n=None)["items"]
+
+def ensure_minimum_coverage(items: List[Dict[str, Any]], clusters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Backfill mandatory categories from heuristic scoring if the selection is short."""
+    items = list(items)
+    covered = {it.get("cluster_id") for it in items}
+    pool = None
+    for cat, minimum in MINIMUM_CATEGORY_ITEMS.items():
+        have = sum(1 for it in items if it.get("category") == cat)
+        if have >= minimum:
+            continue
+        if pool is None:
+            pool = _full_heuristic_pool(clusters)
+        extras = [
+            p for p in pool
+            if p.get("category") == cat and p.get("cluster_id") not in covered
+        ]
+        for e in extras[: minimum - have]:
+            items.append(e)
+            covered.add(e.get("cluster_id"))
+    return items
+
+def ensure_sport_topics(items: List[Dict[str, Any]], clusters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Guarantee minimum F1, Fenerbahçe, Süper Lig, and European football coverage
+    whenever today's feeds contain matching stories. Fenerbahçe is matched first so a
+    Fener Süper Lig match doesn't double-count as the generic Süper Lig item."""
+    items = list(items)
+    covered = {it.get("cluster_id") for it in items}
+    assigned = set()
+    pool = None
+
+    for topic, minimum in SPORT_TOPIC_MINIMUMS.items():
+        keywords = SPORT_TOPIC_KEYWORDS[topic]
+
+        def matches(it: Dict[str, Any]) -> bool:
+            text = _item_text(it)
+            return any(k in text for k in keywords)
+
+        have = 0
+        for it in items:
+            if have >= minimum:
+                break
+            if id(it) not in assigned and it.get("category") == "sport" and matches(it):
+                assigned.add(id(it))
+                have += 1
+
+        while have < minimum:
+            if pool is None:
+                pool = _full_heuristic_pool(clusters)
+            candidate = next(
+                (
+                    p for p in pool
+                    if p.get("category") == "sport"
+                    and p.get("cluster_id") not in covered
+                    and matches(p)
+                ),
+                None,
+            )
+            if candidate is None:
+                break  # no such story in today's feeds
+            items.append(candidate)
+            covered.add(candidate.get("cluster_id"))
+            assigned.add(id(candidate))
+            have += 1
+
+    return items
+
+def heuristic_dry_run_process(clusters: List[Dict[str, Any]], top_n: int = 12) -> Dict[str, Any]:
     """
     Deterministic rule-based processor for dry-run mode or when no LLM key is configured.
     Ensures zero hallucination, strict adherence to facts in snippet, and zero API cost.
@@ -300,10 +408,14 @@ def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
             "why_it_matters": why
         })
 
-    # Balanced pick: highest scores first, round-robin across categories, then per-category caps
+    # Balanced pick: highest scores first, round-robin across categories, then per-category caps.
+    # top_n=None returns every scored cluster (used as the backfill pool for minimum coverage).
     scored.sort(key=lambda x: x["relevance_score"], reverse=True)
-    candidates = [it for it in scored if it["relevance_score"] >= 4]
-    top_items = enforce_category_caps(select_balanced_clusters(candidates, total=12))
+    if top_n is None:
+        top_items = scored
+    else:
+        candidates = [it for it in scored if it["relevance_score"] >= 4]
+        top_items = enforce_category_caps(select_balanced_clusters(candidates, total=top_n))
 
     sample_vocab_en = [
         {
@@ -386,9 +498,43 @@ def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
         "model_used": "dry-run (heuristic)"
     }
 
-def build_prompt(clusters: List[Dict[str, Any]], total_clusters: int = 12, max_items: int = 3, snippet_chars: int = 350) -> str:
+# Cluster counts sent to the LLM per category, so it has enough candidates to
+# satisfy the mandatory minimums (5 tech, 2+ F1, Süper Lig/Fener/Euro football, etc.)
+PROMPT_CATEGORY_TARGETS = {"tech": 6, "sport": 6, "turkey": 3, "world": 3, "finance": 2, "europe": 2}
+
+def select_clusters_by_targets(clusters: List[Dict[str, Any]], targets: Dict[str, int], max_total: int) -> List[Dict[str, Any]]:
+    by_cat: Dict[str, List[Dict[str, Any]]] = {}
+    for c in clusters:
+        by_cat.setdefault(c.get("category", "other"), []).append(c)
+
+    selected = []
+    seen = set()
+    for cat, target in targets.items():
+        for c in by_cat.get(cat, [])[:target]:
+            if id(c) not in seen:
+                selected.append(c)
+                seen.add(id(c))
+
+    queues = [[c for c in q if id(c) not in seen] for q in by_cat.values()]
+    while len(selected) < max_total and any(queues):
+        for q in queues:
+            if q and len(selected) < max_total:
+                c = q.pop(0)
+                if id(c) not in seen:
+                    selected.append(c)
+                    seen.add(id(c))
+    return selected[:max_total]
+
+def build_prompt(clusters: List[Dict[str, Any]], targets: Dict[str, int] = None, max_total: int = 22, max_items: int = 3, snippet_chars: int = 300) -> str:
+    if targets is None:
+        targets = PROMPT_CATEGORY_TARGETS
+    if targets:
+        chosen = select_clusters_by_targets(clusters, targets, max_total)
+    else:
+        chosen = select_balanced_clusters(clusters, total=max_total)
+
     cluster_prompts = []
-    for c in select_balanced_clusters(clusters, total=total_clusters):
+    for c in chosen:
         # Cap items per cluster, keeping distinct source_types first (needed for Turkey comparisons)
         items_sorted = sorted(c["items"], key=lambda it: it.get("source_type") or "")
         items_desc = []
@@ -473,7 +619,9 @@ def process_clusters(
     gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
 
     if dry_run or (not openai_key and not groq_key and not gemini_key):
-        return heuristic_dry_run_process(clusters)
+        result = heuristic_dry_run_process(clusters)
+        result["items"] = ensure_sport_topics(ensure_minimum_coverage(result["items"], clusters), clusters)
+        return result
 
     prompt_content = build_prompt(clusters)
     print(f"[INFO] LLM prompt built: {len(prompt_content)} chars.")
@@ -507,7 +655,7 @@ def process_clusters(
                 # Only worth retrying smaller if the failure was a size/TPM limit
                 if not any(x in last_error.lower() for x in ("413", "too large", "tpm", "context")):
                     break
-                p = build_prompt(clusters, total_clusters=5, max_items=2, snippet_chars=200)
+                p = build_prompt(clusters, targets={}, max_total=6, max_items=2, snippet_chars=200)
                 print(f"[INFO] Retrying {provider} with a compact prompt ({len(p)} chars).")
             try:
                 result = call(p)
@@ -525,6 +673,8 @@ def process_clusters(
             parsed = extract_json(raw_response)
             if isinstance(parsed.get("items"), list):
                 parsed["items"] = enforce_category_caps(parsed["items"])
+                parsed["items"] = ensure_minimum_coverage(parsed["items"], clusters)
+                parsed["items"] = ensure_sport_topics(parsed["items"], clusters)
             if provider == "openai":
                 cost = (prompt_tokens * 0.00000015) + (completion_tokens * 0.00000060)
             elif provider == "gemini":
@@ -543,5 +693,6 @@ def process_clusters(
 
     print("[WARN] All LLM providers failed; falling back to heuristic scoring.")
     fallback = heuristic_dry_run_process(clusters)
+    fallback["items"] = ensure_sport_topics(ensure_minimum_coverage(fallback["items"], clusters), clusters)
     fallback["model_used"] = f"fallback heuristic (errors: {' | '.join(errors)})"
     return fallback
