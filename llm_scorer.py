@@ -122,17 +122,23 @@ def call_openai(api_key: str, prompt: str, model: str = "gpt-4o-mini") -> Tuple[
     return text, pt, ct, model
 
 GROQ_MODEL_PREFERENCE = [
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.8-27b",
     "llama-3.3-70b-versatile",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
     "meta-llama/llama-4-scout-17b-16e-instruct",
     "qwen/qwen3-32b",
     "moonshotai/kimi-k2-instruct",
+    "openai/gpt-oss-20b",
+    "allam-2-7b",
     "gemma2-9b-it",
     "llama-3.1-8b-instant",
 ]
 
-def pick_groq_model(api_key: str) -> str:
-    """Ask Groq which models this account can actually use, and pick the best one.
+GROQ_SKIP_SUBSTRINGS = ("safeguard", "guard", "whisper", "embed", "distil", "tts", "playai", "orpheus", "arabic")
+
+def pick_groq_models(api_key: str) -> List[str]:
+    """Ask Groq which models this account can actually use, ordered best-first.
     Avoids hardcoding model names that get deprecated over time."""
     resp = requests.get(
         "https://api.groq.com/openai/v1/models",
@@ -143,24 +149,32 @@ def pick_groq_model(api_key: str) -> str:
         raise RuntimeError(f"Groq /models returned {resp.status_code}: {resp.text[:200]}")
     ids = [m.get("id") for m in resp.json().get("data", []) if m.get("id")]
     # Only general-purpose chat models: skip moderation, audio and embedding models
-    skip = ("safeguard", "guard", "whisper", "embed", "distil", "tts", "playai")
-    ids = [i for i in ids if not any(s in i.lower() for s in skip)]
+    ids = [i for i in ids if not any(s in i.lower() for s in GROQ_SKIP_SUBSTRINGS)]
     if not ids:
         raise RuntimeError(
             "Groq account reports no available chat models. Verify the account has "
             "production access (console.groq.com may require account/phone verification)."
         )
-    for pref in GROQ_MODEL_PREFERENCE:
-        if pref in ids:
-            return pref
-    print(f"[INFO] No preferred Groq model found; available: {ids}. Using '{ids[0]}'.")
-    return ids[0]
+    ordered = [p for p in GROQ_MODEL_PREFERENCE if p in ids]
+    ordered += [i for i in ids if i not in ordered]
+    print(f"[INFO] Groq chat models available (in try-order): {ordered}")
+    return ordered
 
 def call_groq(api_key: str, prompt: str, model: str = None) -> Tuple[str, int, int, str]:
-    if not model:
-        model = pick_groq_model(api_key)
-    text, pt, ct = call_openai_compatible(api_key, prompt, "https://api.groq.com/openai/v1/chat/completions", model)
-    return text, pt, ct, model
+    models = [model] if model else pick_groq_models(api_key)
+    last_err = None
+    for m in models:
+        try:
+            text, pt, ct = call_openai_compatible(api_key, prompt, "https://api.groq.com/openai/v1/chat/completions", m)
+            return text, pt, ct, m
+        except RuntimeError as e:
+            last_err = str(e)
+            # Model-specific rejection (deprecated, gated, terms acceptance): try the next model
+            if any(x in last_err for x in ("404", "400", "does not exist", "terms acceptance")):
+                print(f"[WARN] Groq model '{m}' unavailable ({last_err[:120]}); trying next model...")
+                continue
+            raise
+    raise RuntimeError(f"All Groq models failed. Last error: {last_err}")
 
 def select_balanced_clusters(clusters: List[Dict[str, Any]], total: int = 15) -> List[Dict[str, Any]]:
     """Round-robin across categories so the LLM sees every category, not just the first N clusters."""
