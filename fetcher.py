@@ -1,6 +1,6 @@
 import re
 import html
-import time
+import calendar
 from typing import List, Dict, Any, Tuple
 import requests
 import feedparser
@@ -60,9 +60,9 @@ def fetch_feed(source: Dict[str, Any], timeout: int = 10) -> Tuple[List[Dict[str
             )
             snippet = clean_html(raw_summary)
 
-            # Published timestamp
+            # Published timestamp (feedparser returns UTC struct_time)
             published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
-            timestamp = time.mktime(published_parsed) if published_parsed else None
+            timestamp = calendar.timegm(published_parsed) if published_parsed else None
 
             if not title or not link:
                 continue

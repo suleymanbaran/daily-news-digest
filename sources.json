@@ -6,12 +6,6 @@
     "feed_url": "https://tldr.tech/api/rss/ai"
   },
   {
-    "name": "The Batch (DeepLearning.AI)",
-    "category": "tech",
-    "source_type": null,
-    "feed_url": "https://www.deeplearning.ai/the-batch/feed/"
-  },
-  {
     "name": "Latent Space",
     "category": "tech",
     "source_type": null,
@@ -40,12 +34,6 @@
     "category": "tech",
     "source_type": null,
     "feed_url": "https://blog.google/technology/ai/rss/"
-  },
-  {
-    "name": "Anthropic News",
-    "category": "tech",
-    "source_type": null,
-    "feed_url": "https://www.anthropic.com/feed.xml"
   },
   {
     "name": "Hacker News Front Page",
@@ -114,12 +102,6 @@
     "feed_url": "https://medyascope.tv/feed/"
   },
   {
-    "name": "T24",
-    "category": "turkey",
-    "source_type": "independent",
-    "feed_url": "https://t24.com.tr/rss"
-  },
-  {
     "name": "Diken",
     "category": "turkey",
     "source_type": "independent",
@@ -156,12 +138,6 @@
     "feed_url": "https://www.ansa.it/sito/ansait_rss.xml"
   },
   {
-    "name": "StartupItalia",
-    "category": "europe",
-    "source_type": null,
-    "feed_url": "https://startupitalia.eu/feed/"
-  },
-  {
     "name": "Federal Reserve Press Releases",
     "category": "finance",
     "source_type": null,
@@ -174,18 +150,6 @@
     "feed_url": "https://www.ecb.europa.eu/rss/press.html"
   },
   {
-    "name": "Central Bank of Turkey (TCMB)",
-    "category": "finance",
-    "source_type": null,
-    "feed_url": "https://www.tcmb.gov.tr/wps/wcm/connect/tcmb+en/tcmb+en/rss/press+releases"
-  },
-  {
-    "name": "TUIK (TurkStat)",
-    "category": "finance",
-    "source_type": null,
-    "feed_url": "https://data.tuik.gov.tr/rss"
-  },
-  {
     "name": "Istat",
     "category": "finance",
     "source_type": null,
@@ -196,12 +160,6 @@
     "category": "finance",
     "source_type": null,
     "feed_url": "https://ec.europa.eu/eurostat/en/search?p_p_id=estatsearchportlet_WAR_estatsearchportlet&p_p_lifecycle=2&p_p_state=maximized&p_p_mode=view&p_p_resource_id=atom&_estatsearchportlet_WAR_estatsearchportlet_collection=CAT_PREREL"
-  },
-  {
-    "name": "Yahoo Finance",
-    "category": "finance",
-    "source_type": null,
-    "feed_url": "https://finance.yahoo.com/news/rssindex"
   },
   {
     "name": "CNBC Finance",
@@ -220,5 +178,23 @@
     "category": "finance",
     "source_type": null,
     "feed_url": "https://www.investing.com/rss/news_25.rss"
+  },
+  {
+    "name": "TechCrunch AI",
+    "category": "tech",
+    "source_type": null,
+    "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+  },
+  {
+    "name": "Wired Italia",
+    "category": "europe",
+    "source_type": null,
+    "feed_url": "https://www.wired.it/feed/rss"
+  },
+  {
+    "name": "Bloomberg HT",
+    "category": "turkey",
+    "source_type": "independent",
+    "feed_url": "https://www.bloomberght.com/rss"
   }
 ]

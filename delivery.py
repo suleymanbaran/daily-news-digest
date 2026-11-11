@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from typing import List
 import requests
 
@@ -56,21 +57,30 @@ def send_telegram_digest(digest_markdown: str) -> bool:
             "parse_mode": "Markdown",
             "disable_web_page_preview": True
         }
-        try:
-            resp = requests.post(url, json=payload, timeout=15)
-            # If markdown parsing fails for ANY reason (e.g. special characters), retry as plain text
-            if resp.status_code != 200:
-                print(f"[DEBUG] Telegram markdown attempt failed (HTTP {resp.status_code}: {resp.text}). Retrying without markdown...")
-                payload.pop("parse_mode", None)
-                resp = requests.post(url, json=payload, timeout=15)
+        sent = False
+        for attempt in range(3):
+            try:
+                resp = requests.post(url, json=payload, timeout=20)
+                # If markdown parsing fails for ANY reason (e.g. special characters), retry as plain text
+                if resp.status_code != 200 and "parse_mode" in payload:
+                    print(f"[DEBUG] Telegram markdown attempt failed (HTTP {resp.status_code}: {resp.text[:200]}). Retrying without markdown...")
+                    payload.pop("parse_mode")
+                    resp = requests.post(url, json=payload, timeout=20)
 
-            if resp.status_code != 200:
-                print(f"[WARN] Telegram delivery failed for chunk {i+1}: HTTP {resp.status_code} - {resp.text}")
-                return False
-            else:
-                print(f"[INFO] Telegram chunk {i+1}/{len(chunks)} sent successfully.")
-        except Exception as e:
-            print(f"[WARN] Error sending Telegram message: {e}")
+                if resp.status_code == 200:
+                    print(f"[INFO] Telegram chunk {i+1}/{len(chunks)} sent successfully.")
+                    sent = True
+                    break
+
+                print(f"[WARN] Telegram chunk {i+1} attempt {attempt+1} failed: HTTP {resp.status_code} - {resp.text[:200]}")
+                if resp.status_code not in (429, 500, 502, 503, 504):
+                    return False
+            except requests.exceptions.RequestException as e:
+                print(f"[WARN] Telegram chunk {i+1} attempt {attempt+1} error: {e}")
+            time.sleep(2 * (attempt + 1))
+
+        if not sent:
             return False
+        time.sleep(1)  # stay well within Telegram rate limits between chunks
 
     return True

@@ -22,7 +22,7 @@ def main():
     parser.add_argument("--log", default="run-log.json", help="Path to run-log.json")
     parser.add_argument("--output-dir", default=".", help="Directory to save digest markdown")
     parser.add_argument("--max-age-hours", type=int, default=48, help="Max item age in hours")
-    parser.add_argument("--dry-run", action="store_true", help="Dry run mode (no LLM calls)")
+    parser.add_argument("--dry-run", action="store_true", help="Dry run mode (no LLM calls, no delivery, no state changes)")
     args = parser.parse_args()
 
     start_time = time.time()
@@ -30,10 +30,15 @@ def main():
     output_filename = os.path.join(args.output_dir, f"digest-{today_str}.md")
 
     print(f"=== Personal Daily News Digest ({today_str}) ===")
+    has_llm_key = bool(
+        os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("GROQ_API_KEY")
+        or os.environ.get("GEMINI_API_KEY")
+    )
     if args.dry_run:
         print("[MODE] Running in DRY-RUN mode (LLM calls disabled, heuristics enabled).")
-    elif not os.environ.get("GEMINI_API_KEY") and not os.environ.get("OPENAI_API_KEY"):
-        print("[NOTICE] Neither GEMINI_API_KEY nor OPENAI_API_KEY found. Defaulting to dry-run heuristic mode.")
+    elif not has_llm_key:
+        print("[NOTICE] No OPENAI_API_KEY / GROQ_API_KEY / GEMINI_API_KEY found. Defaulting to heuristic mode.", file=sys.stderr)
 
     # 1. Load Sources
     if not os.path.exists(args.config):
@@ -74,42 +79,54 @@ def main():
     print(f"Saved digest to {output_filename}.")
 
     # 7. Delivery via Telegram (if tokens configured)
-    telegram_delivered = False
-    if not args.dry_run:
+    telegram_configured = bool(os.environ.get("TELEGRAM_BOT_TOKEN")) and bool(os.environ.get("TELEGRAM_CHAT_ID"))
+    telegram_delivered = None
+    if args.dry_run:
+        print("[INFO] Dry-run: skipping Telegram delivery.")
+    elif not telegram_configured:
+        print("[WARN] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set; digest saved to file only.", file=sys.stderr)
+    else:
         from delivery import send_telegram_digest
-        bot_token_present = bool(os.environ.get("TELEGRAM_BOT_TOKEN"))
-        chat_id_present = bool(os.environ.get("TELEGRAM_CHAT_ID"))
-        print(f"[INFO] Telegram configuration: TELEGRAM_BOT_TOKEN set={bot_token_present}, TELEGRAM_CHAT_ID set={chat_id_present}")
-        if bot_token_present and chat_id_present:
-            print("Sending digest to Telegram...")
-            telegram_delivered = send_telegram_digest(digest_md)
-            if telegram_delivered:
-                print("Successfully delivered digest to Telegram.")
-            else:
-                print("[WARN] Telegram delivery failed. Check output above.")
+        print("Sending digest to Telegram...")
+        telegram_delivered = send_telegram_digest(digest_md)
+        if telegram_delivered:
+            print("Successfully delivered digest to Telegram.")
         else:
-            print("[WARN] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not provided in environment secrets.")
+            print("[ERROR] Telegram delivery failed.", file=sys.stderr)
 
-    # 8. Update State (mark items as seen only if not in dry-run mode, or record if desired)
-    for it in filtered_items:
-        url = it.get("link") or it.get("id")
-        if url:
-            seen_urls[url] = time.time()
-    save_state(args.state, state)
-    print(f"Updated state file {args.state} with {len(seen_urls)} tracked URLs.")
+    # 8. Decide run success. A run is successful only if it produced a digest AND
+    #    (delivery wasn't required or it actually arrived). On failure, state is NOT
+    #    updated, so the next run retries the same articles, and the process exits
+    #    non-zero so GitHub Actions shows the failure.
+    delivery_ok = args.dry_run or not telegram_configured or bool(telegram_delivered)
+    success = items_in_digest > 0 and delivery_ok
 
-    # 8. Log Run
+    # 9. Update State (only on real, delivered runs — never in dry-run)
+    if success and not args.dry_run:
+        for it in filtered_items:
+            url = it.get("link") or it.get("id")
+            if url:
+                seen_urls[url] = time.time()
+        save_state(args.state, state)
+        print(f"Updated state file {args.state} with {len(seen_urls)} tracked URLs.")
+    else:
+        print("[INFO] State not updated (dry-run or unsuccessful run); articles will be retried next run.")
+
+    # 10. Log Run
     duration = round(time.time() - start_time, 2)
     log_entry = {
         "timestamp": datetime.now().isoformat(),
         "date": today_str,
         "dry_run": args.dry_run,
+        "success": success,
         "sources_configured": len(sources),
         "items_fetched": len(raw_items),
         "items_kept_after_prefilter": len(filtered_items),
         "clusters_formed": len(clusters),
         "items_in_digest": items_in_digest,
         "feed_problems_count": len(feed_problems),
+        "telegram_configured": telegram_configured,
+        "telegram_delivered": telegram_delivered,
         "model_used": processed_data.get("model_used"),
         "tokens_prompt": processed_data.get("tokens_prompt", 0),
         "tokens_completion": processed_data.get("tokens_completion", 0),
@@ -132,6 +149,15 @@ def main():
     with open(args.log, "w", encoding="utf-8") as f:
         json.dump(run_logs, f, indent=2)
     print(f"Logged run summary to {args.log} (Duration: {duration}s, Cost: ${log_entry['estimated_cost_usd']:.6f}).")
+
+    if not success:
+        reason = []
+        if items_in_digest == 0:
+            reason.append("digest is empty (no items passed filtering or all feeds failed)")
+        if telegram_delivered is False:
+            reason.append("Telegram delivery failed")
+        print(f"[ERROR] Run unsuccessful: {'; '.join(reason)}. Exiting with code 1.", file=sys.stderr)
+        sys.exit(1)
 
     print("Digest generation complete. Exiting cleanly.")
     sys.exit(0)
