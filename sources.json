@@ -292,5 +292,29 @@
     "category": "sport",
     "source_type": null,
     "feed_url": "https://news.google.com/rss/search?q=s%C3%BCper%20lig&hl=en-US&gl=US&ceid=US:en"
+  },
+  {
+    "name": "Motorsport.com F1",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.motorsport.com/rss/f1/news/"
+  },
+  {
+    "name": "The Race",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.the-race.com/feed/"
+  },
+  {
+    "name": "RaceFans",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.racefans.net/feed/"
+  },
+  {
+    "name": "Crash.net F1",
+    "category": "sport",
+    "source_type": null,
+    "feed_url": "https://www.crash.net/rss/f1"
   }
 ]
