@@ -15,7 +15,7 @@ SYSTEM_INSTRUCTION = """You are "Personal Journalist", a friendly daily news-dig
 
 Your task:
 1. Score each story cluster 1-5 for relevance to this user (5 = highly relevant, 1 = low relevance).
-2. Select the top stories (score 4-5) and produce details for 8-12 of them, balanced across categories tech / europe / turkey / finance / world / sport — always include the best 2-3 sport stories when available:
+2. Select the top stories (score 4-5) and produce details for 8-12 of them, balanced across categories tech / europe / turkey / finance / world / sport. HARD LIMITS: at most 2 sport items; at least 6 of the items must come from tech / europe / turkey / finance / world combined when enough fresh candidates exist. If few fresh non-sport candidates exist, return FEWER total items instead of filling the digest with sport:
    - "tldr": ONE punchy sentence (max ~20 words) capturing the core of the story, in simple everyday English.
    - "summary": a DETAILED but easy-to-understand summary of 3-4 sentences. Explain the story like you are talking to a smart friend: what happened, the key numbers or facts, who is involved, and what happens next. Use ONLY facts explicitly present in the provided titles/snippets. NEVER hallucinate or invent outside facts. If a snippet is thin, summarize what is there in 2 sentences rather than inventing detail.
    - "why_it_matters": exactly ONE short, personal sentence tailored to the user's profile (career, exams/interviews, AI engineering, Italy/Europe job market, Turkish economy). Vary the wording between items; never repeat the same sentence.
@@ -191,6 +191,23 @@ def select_balanced_clusters(clusters: List[Dict[str, Any]], total: int = 15) ->
                 selected.append(q.pop(0))
     return selected
 
+# Per-category caps for the final digest so a content-rich feed (e.g. 6 sport
+# sources) can never crowd out tech/finance/politics.
+CATEGORY_CAPS = {"sport": 2}
+DEFAULT_CATEGORY_CAP = 4
+
+def enforce_category_caps(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    counts: Dict[str, int] = {}
+    capped = []
+    for it in sorted(items, key=lambda x: x.get("relevance_score", 0), reverse=True):
+        cat = it.get("category", "other")
+        cap = CATEGORY_CAPS.get(cat, DEFAULT_CATEGORY_CAP)
+        if counts.get(cat, 0) >= cap:
+            continue
+        counts[cat] = counts.get(cat, 0) + 1
+        capped.append(it)
+    return capped
+
 def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Deterministic rule-based processor for dry-run mode or when no LLM key is configured.
@@ -283,10 +300,10 @@ def heuristic_dry_run_process(clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
             "why_it_matters": why
         })
 
-    # Balanced pick: highest scores first, round-robin across categories
+    # Balanced pick: highest scores first, round-robin across categories, then per-category caps
     scored.sort(key=lambda x: x["relevance_score"], reverse=True)
     candidates = [it for it in scored if it["relevance_score"] >= 4]
-    top_items = select_balanced_clusters(candidates, total=12)
+    top_items = enforce_category_caps(select_balanced_clusters(candidates, total=12))
 
     sample_vocab_en = [
         {
@@ -506,6 +523,8 @@ def process_clusters(
         try:
             raw_response, prompt_tokens, completion_tokens, model_used = result
             parsed = extract_json(raw_response)
+            if isinstance(parsed.get("items"), list):
+                parsed["items"] = enforce_category_caps(parsed["items"])
             if provider == "openai":
                 cost = (prompt_tokens * 0.00000015) + (completion_tokens * 0.00000060)
             elif provider == "gemini":
