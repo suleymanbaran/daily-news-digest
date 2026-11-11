@@ -88,7 +88,7 @@ def generate_digest_markdown(
         lines.append("• No new vocabulary items extracted today.")
     lines.append("")
 
-    lines.append("🇮🇹 *Parola del Giorno — Italian (A1–A2)*")
+    lines.append("🇮🇹 *Italian Word of the Day (A1–A2) — with English translations*")
     vocab_it = processed_data.get("vocabulary_italian", [])
     if vocab_it:
         for v in vocab_it:

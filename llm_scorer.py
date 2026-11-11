@@ -25,7 +25,7 @@ Your task:
    - Finance: NEVER give investment advice, buy/sell suggestions, or price predictions. ONLY state what happened, the number, and the source.
 4. Vocabulary (extracted from today's digest content where possible):
    - Up to 5 harder English words (B2-C1) with a short Turkish meaning and one natural English example sentence.
-   - 5 Italian words (A1-A2) relevant to tech, student life, or daily news, with definite article and gender (e.g. "il lavoro (masculine)").
+   - 5 Italian words (A1-A2) relevant to tech, student life, or daily news, with definite article and gender (e.g. "il lavoro (masculine)"). The user does not speak Italian yet: "english_meaning" is MANDATORY for every entry — a clear, short English translation.
 
 Respond ONLY with valid JSON matching the requested schema.
 """
@@ -389,9 +389,9 @@ def process_clusters(
     Tries every configured LLM provider in order before falling back to heuristics.
     Returns processed digest payload + token/cost metrics.
     """
-    openai_key = os.environ.get("OPENAI_API_KEY")
-    groq_key = os.environ.get("GROQ_API_KEY")
-    gemini_key = os.environ.get("GEMINI_API_KEY")
+    openai_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    groq_key = (os.environ.get("GROQ_API_KEY") or "").strip()
+    gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
 
     if dry_run or (not openai_key and not groq_key and not gemini_key):
         return heuristic_dry_run_process(clusters)
