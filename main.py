@@ -10,7 +10,8 @@ from dedup_filter import (
     load_state,
     save_state,
     pre_filter_items,
-    cluster_items
+    cluster_items,
+    normalize_title
 )
 from llm_scorer import process_clusters
 from digest_generator import generate_digest_markdown
@@ -59,7 +60,8 @@ def main():
     # 3. Deduplicate and Pre-filter
     state = load_state(args.state)
     seen_urls = state.get("seen_urls", {})
-    filtered_items = pre_filter_items(raw_items, seen_urls, max_age_hours=args.max_age_hours)
+    seen_titles = state.setdefault("seen_titles", {})
+    filtered_items = pre_filter_items(raw_items, seen_urls, max_age_hours=args.max_age_hours, seen_titles=seen_titles)
     print(f"Items remaining after deduplication and rule-based pre-filtering: {len(filtered_items)}.")
 
     # 4. Cluster similar stories
@@ -107,8 +109,11 @@ def main():
             url = it.get("link") or it.get("id")
             if url:
                 seen_urls[url] = time.time()
+            norm_title = normalize_title(it.get("title", ""))
+            if norm_title:
+                seen_titles[norm_title] = time.time()
         save_state(args.state, state)
-        print(f"Updated state file {args.state} with {len(seen_urls)} tracked URLs.")
+        print(f"Updated state file {args.state} with {len(seen_urls)} tracked URLs and {len(seen_titles)} tracked titles.")
     else:
         print("[INFO] State not updated (dry-run or unsuccessful run); articles will be retried next run.")
 

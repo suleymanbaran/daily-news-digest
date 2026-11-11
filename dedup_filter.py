@@ -64,21 +64,26 @@ def load_state(state_path: str) -> Dict[str, Any]:
     if os.path.exists(state_path):
         try:
             with open(state_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                state = json.load(f)
+                state.setdefault("seen_urls", {})
+                state.setdefault("seen_titles", {})
+                return state
         except Exception:
-            return {"seen_urls": {}}
-    return {"seen_urls": {}}
+            return {"seen_urls": {}, "seen_titles": {}}
+    return {"seen_urls": {}, "seen_titles": {}}
 
 def save_state(state_path: str, state: Dict[str, Any], max_age_days: int = 14) -> None:
     now = time.time()
     cutoff = now - (max_age_days * 86400)
-    seen_urls = state.get("seen_urls", {})
-    # Prune old records
-    pruned = {url: ts for url, ts in seen_urls.items() if ts >= cutoff}
-    state["seen_urls"] = pruned
+    for key in ("seen_urls", "seen_titles"):
+        state[key] = {k: ts for k, ts in state.get(key, {}).items() if ts >= cutoff}
     state["last_run"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
     with open(state_path, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
+
+def normalize_title(title: str) -> str:
+    """Canonical form for title-based dedup (Google News proxy URLs rotate per fetch)."""
+    return re.sub(r"[^a-z0-9çğıöşü ]+", "", (title or "").lower()).strip()[:100]
 
 def tokenize(text: str) -> set:
     words = re.findall(r"[a-zA-Z0-9çğıöşüÇĞİÖŞÜ]+", text.lower())
@@ -88,19 +93,23 @@ def matches_keywords(title: str, snippet: str, keyword_set: set) -> bool:
     tokens = tokenize(title + " " + snippet)
     return bool(tokens & keyword_set)
 
-def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], max_age_hours: int = 48) -> List[Dict[str, Any]]:
+def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], max_age_hours: int = 48, seen_titles: Dict[str, float] = None) -> List[Dict[str, Any]]:
     """
-    1. Filter already seen items.
+    1. Filter already seen items (by URL and by normalized title).
     2. Filter items older than max_age_hours (if timestamp available).
     3. Filter out items that do not match general interest heuristics.
     """
     now = time.time()
     age_limit_seconds = max_age_hours * 3600
+    seen_titles = seen_titles if seen_titles is not None else {}
     kept = []
 
     for item in items:
         url = item.get("link") or item.get("id")
         if not url or url in seen_urls:
+            continue
+        norm_title = normalize_title(item.get("title", ""))
+        if norm_title and norm_title in seen_titles:
             continue
 
         # Age check
@@ -151,7 +160,10 @@ def pre_filter_items(items: List[Dict[str, Any]], seen_urls: Dict[str, float], m
         already_kept_urls = {it.get("link") or it.get("id") for it in kept}
         for item in items:
             url = item.get("link") or item.get("id")
-            if url in already_kept_urls:
+            if url in already_kept_urls or url in seen_urls:
+                continue
+            norm_title = normalize_title(item.get("title", ""))
+            if norm_title and norm_title in seen_titles:
                 continue
             ts = item.get("timestamp")
             if ts and (now - ts > age_limit_seconds):
