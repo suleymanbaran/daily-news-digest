@@ -214,5 +214,25 @@
     "estimated_cost_usd": 0.0,
     "duration_seconds": 28.5,
     "output_file": "./digest-2026-11-11.md"
+  },
+  {
+    "timestamp": "2026-11-11T13:34:02.507256",
+    "date": "2026-11-11",
+    "dry_run": false,
+    "success": true,
+    "sources_configured": 49,
+    "items_fetched": 3695,
+    "items_kept_after_prefilter": 186,
+    "clusters_formed": 176,
+    "items_in_digest": 12,
+    "feed_problems_count": 1,
+    "telegram_configured": true,
+    "telegram_delivered": true,
+    "model_used": "fallback heuristic (errors: groq: API error (canopylabs/orpheus-arabic-saudi) 400: {\"error\":{\"message\":\"The model `canopylabs/orpheus-arabic-saudi` requires terms acceptance. Please have the org)",
+    "tokens_prompt": 0,
+    "tokens_completion": 0,
+    "estimated_cost_usd": 0.0,
+    "duration_seconds": 30.75,
+    "output_file": "./digest-2026-11-11.md"
   }
 ]
