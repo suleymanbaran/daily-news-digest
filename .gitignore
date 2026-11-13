@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+
+# Generated per-run output; delivered to Telegram, never published
+digest-*.md

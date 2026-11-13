@@ -12,7 +12,7 @@ Runs automatically via **GitHub Actions** and delivers daily summaries directly 
 - `fetcher.py`: Fetches and cleans RSS/Atom feed entries (titles, snippets, links) without full-page scraping; catches feed errors.
 - `dedup_filter.py`: State tracking (`state.json`), age filtering (<48h), heuristic pre-filtering, and story clustering.
 - `llm_scorer.py`: Scores relevance (1–5) to user goals, summarizes strictly from feed text, formats Turkey multi-source comparisons, generates English/Italian vocabulary, and logs token usage/cost.
-- `digest_generator.py`: Formats the Markdown output (`digest-YYYY-MM-DD.md`) matching the required schema.
+- `digest_generator.py`: Formats the Markdown output (`digest-YYYY-MM-DD.md`) matching the required schema. The digest is a local artifact delivered to Telegram — gitignored, never committed.
 - `delivery.py`: Formats and chunks messages for Telegram API delivery (`https://api.telegram.org/bot<TOKEN>/sendMessage`).
 - `main.py`: Command-line entrypoint that executes once and exits (0 error code).
 - `.github/workflows/daily-digest.yml`: GitHub Actions automated daily cron workflow.
